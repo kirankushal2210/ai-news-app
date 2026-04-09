@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI News Board</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
+</head>
+<body>
+    <div class="page-shell">
+        <header class="topbar">
+            <div class="brand">
+                <span class="brand-mark">AI</span>
+                <div>
+                    <strong>AI News Board</strong>
+                    <small>Daily technology dispatch</small>
+                </div>
+            </div>
+            <nav class="nav-links">
+                <a href="#digests">Digests</a>
+                <a href="#headlines">Headlines</a>
+                <a href="#sources">Sources</a>
+                <a href="#pulse">Pulse</a>
+            </nav>
+            <div class="topbar-actions">
+                <a class="button button--primary" href="{{ url_for('refresh') }}">Refresh feed</a>
+            </div>
+        </header>
+
+        <section class="hero">
+            <div class="hero-copy">
+                <div class="eyebrow">AI News Network</div>
+                <h1>Live AI reports, concise summaries, and breaking headlines.</h1>
+                <p>Curated from YouTube, OpenAI, and Anthropic sources — all aggregated into a modern newsroom experience.</p>
+
+                <div class="hero-meta">
+                    <div><strong>{{ counts.youtube }}</strong> YouTube stories</div>
+                    <div><strong>{{ counts.openai }}</strong> OpenAI articles</div>
+                    <div><strong>{{ counts.anthropic }}</strong> Anthropic feeds</div>
+                    <div><strong>{{ counts.digests }}</strong> AI digests</div>
+                </div>
+            </div>
+
+            <div class="hero-panel">
+                <div class="media-panel">
+                    <img src="{{ url_for('static', filename='ai-hero.svg') }}" alt="AI hero image" />
+                </div>
+                <div class="panel-copy">
+                    <div class="panel-title">Today’s AI briefing</div>
+                    <p>Press Refresh to pull the latest articles and update the newsroom instantly.</p>
+                    <div class="panel-summary">
+                        <div>
+                            <span class="panel-label">Latest digest</span>
+                            <strong>{{ digests[0].title if digests else 'No digest available yet' }}</strong>
+                        </div>
+                        <div>
+                            <span class="panel-label">Updated</span>
+                            <strong>{{ last_updated.strftime('%b %d, %Y %H:%M') if last_updated else 'Not available' }}</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div class="ticker-bar">
+            <div class="ticker-label">LIVE NOW</div>
+            <div class="ticker-text">AI news scraping is active. Refresh for the newest stories from your sources.</div>
+        </div>
+
+        <main class="content-layout">
+            <section class="section section--wide" id="digests">
+                <div class="section-header">
+                    <div>
+                        <h2>AI Digest Spotlight</h2>
+                        <p>Top summaries distilled from the latest scraped stories.</p>
+                    </div>
+                </div>
+
+                {% if digests %}
+                <div class="digest-grid">
+                    {% for digest in digests %}
+                    <article class="digest-card">
+                        <div class="digest-media">
+                            <img src="{{ url_for('static', filename='ai-thumb.svg') }}" alt="AI digest image" />
+                        </div>
+                        <div class="digest-card-body">
+                            <div class="digest-header">
+                                <span class="label">{{ digest.article_type|capitalize }}</span>
+                                <a href="{{ digest.url }}" target="_blank" rel="noreferrer" class="source-link">Source</a>
+                            </div>
+                            <h3>{{ digest.title }}</h3>
+                            <p>{{ digest.summary }}</p>
+                        </div>
+                    </article>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    <p>No digests are available yet. Click refresh to scrape fresh stories.</p>
+                </div>
+                {% endif %}
+            </section>
+
+            <section class="section" id="headlines">
+                <div class="section-header section-header--compact">
+                    <div>
+                        <h2>Latest AI headlines</h2>
+                        <p>Search, filter, and explore the newest stories across all sources.</p>
+                    </div>
+                    <div class="search-box">
+                        <input id="searchInput" type="search" placeholder="Search headlines..." />
+                    </div>
+                </div>
+
+                <div class="filter-row">
+                    <button class="filter-chip active" data-source="all">All</button>
+                    <button class="filter-chip" data-source="youtube">YouTube</button>
+                    <button class="filter-chip" data-source="openai">OpenAI</button>
+                    <button class="filter-chip" data-source="anthropic">Anthropic</button>
+                </div>
+
+                <div class="news-grid" id="newsGrid">
+                    {% for item in youtube_videos %}
+                    <article class="news-card" data-source="youtube">
+                        <div class="news-card__meta">
+                            <span class="label label--source">YouTube</span>
+                            <span>{{ item.published_at.strftime('%b %d, %Y') }}</span>
+                        </div>
+                        <h3><a href="{{ item.url }}" target="_blank" rel="noreferrer">{{ item.title }}</a></h3>
+                        <p>{{ item.description[:220] }}{% if item.description|length > 220 %}...{% endif %}</p>
+                    </article>
+                    {% endfor %}
+
+                    {% for item in openai_articles %}
+                    <article class="news-card" data-source="openai">
+                        <div class="news-card__meta">
+                            <span class="label label--source label--openai">OpenAI</span>
+                            <span>{{ item.published_at.strftime('%b %d, %Y') }}</span>
+                        </div>
+                        <h3><a href="{{ item.url }}" target="_blank" rel="noreferrer">{{ item.title }}</a></h3>
+                        <p>{{ item.description[:220] }}{% if item.description|length > 220 %}...{% endif %}</p>
+                    </article>
+                    {% endfor %}
+
+                    {% for item in anthropic_articles %}
+                    <article class="news-card" data-source="anthropic">
+                        <div class="news-card__meta">
+                            <span class="label label--source label--anthropic">Anthropic</span>
+                            <span>{{ item.published_at.strftime('%b %d, %Y') }}</span>
+                        </div>
+                        <h3><a href="{{ item.url }}" target="_blank" rel="noreferrer">{{ item.title }}</a></h3>
+                        <p>{{ item.description[:220] }}{% if item.description|length > 220 %}...{% endif %}</p>
+                    </article>
+                    {% endfor %}
+                </div>
+            </section>
+
+            <aside class="sidebar" id="sources">
+                <div class="panel card panel--highlight">
+                    <h3>AI News Pulse</h3>
+                    <p>Current inventory of AI stories and digests collected during this session.</p>
+                    <div class="metrics-list">
+                        <div><strong>{{ counts.youtube }}</strong><span>YouTube</span></div>
+                        <div><strong>{{ counts.openai }}</strong><span>OpenAI</span></div>
+                        <div><strong>{{ counts.anthropic }}</strong><span>Anthropic</span></div>
+                        <div><strong>{{ counts.digests }}</strong><span>Digests</span></div>
+                    </div>
+                </div>
+
+                <div class="panel card">
+                    <h3>Editor’s note</h3>
+                    <p>Use the search field to narrow headlines instantly. The refresh button pulls fresh content from all configured AI sources.</p>
+                </div>
+
+                <div class="panel card">
+                    <h3>Source spotlight</h3>
+                    <ul class="source-list">
+                        <li>YouTube channel feeds</li>
+                        <li>OpenAI blog & announcements</li>
+                        <li>Anthropic news feeds</li>
+                        <li>AI digest summaries</li>
+                    </ul>
+                </div>
+            </aside>
+        </main>
+
+        <footer class="footer">
+            <div>Local AI news aggregator — built for quick reading and daily reporting.</div>
+            <div>Run again anytime with Refresh or by executing <code>uv run python main.py</code>.</div>
+        </footer>
+    </div>
+
+    <script>
+        const newsGrid = document.getElementById('newsGrid');
+        const searchInput = document.getElementById('searchInput');
+        const filterChips = document.querySelectorAll('.filter-chip');
+
+        function updateFilters() {
+            const query = searchInput.value.toLowerCase();
+            const activeSource = document.querySelector('.filter-chip.active').dataset.source;
+            document.querySelectorAll('.news-card').forEach(card => {
+                const title = card.querySelector('h3').innerText.toLowerCase();
+                const text = card.querySelector('p').innerText.toLowerCase();
+                const source = card.dataset.source;
+                const matchesQuery = !query || title.includes(query) || text.includes(query);
+                const matchesSource = activeSource === 'all' || source === activeSource;
+                card.style.display = matchesQuery && matchesSource ? 'block' : 'none';
+            });
+        }
+
+        searchInput.addEventListener('input', updateFilters);
+        filterChips.forEach(chip => {
+            chip.addEventListener('click', () => {
+                filterChips.forEach(button => button.classList.remove('active'));
+                chip.classList.add('active');
+                updateFilters();
+            });
+        });
+    </script>
+</body>
+</html>
