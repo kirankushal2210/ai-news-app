@@ -6,6 +6,10 @@ from dotenv import load_dotenv
 load_dotenv()
 
 def get_database_url() -> str:
+    db_url = os.getenv("DATABASE_URL")
+    if db_url:
+        return db_url
+
     user = os.getenv("POSTGRES_USER", "postgres")
     password = os.getenv("POSTGRES_PASSWORD", "postgres")
     host = os.getenv("POSTGRES_HOST", "localhost")

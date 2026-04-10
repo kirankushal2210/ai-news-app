@@ -1,5 +1,6 @@
 YOUTUBE_CHANNELS = [
-    # "UCn8ujwUInbJkBhffxqAPBVQ", # Dave Ebbelaar
-    "UCawZsQWqfGSbCI5yjkdVkTA", # Matthew Berman
+    "UCawZsQWqfGSbCI5yjkdVkTA",  # Matthew Berman
+    "UCn8ujwUInbJkBhffxqAPBVQ",  # Dave Ebbelaar
+    "UCxHAlbZQNFU2LgEtiqd2Maw",  # AI Jason
+    "UCWX3yGbODI3HLKFqqn4MiUg",  # AI Explained
 ]
-

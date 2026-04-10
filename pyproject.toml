@@ -19,6 +19,7 @@ dependencies = [
     "sqlalchemy>=2.0.44",
     "youtube-transcript-api>=1.2.3",
     "flask>=3.0.0",
+    "gunicorn>=25.3.0",
 ]
 
 [dependency-groups]

@@ -3,219 +3,622 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AI News Board</title>
+    <meta name="description" content="Real-time AI news aggregator pulling the latest from YouTube, OpenAI, and Anthropic." />
+    <title>AI News Board — Live AI Intelligence Feed</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
 </head>
 <body>
-    <div class="page-shell">
-        <header class="topbar">
-            <div class="brand">
-                <span class="brand-mark">AI</span>
-                <div>
-                    <strong>AI News Board</strong>
-                    <small>Daily technology dispatch</small>
-                </div>
-            </div>
-            <nav class="nav-links">
-                <a href="#digests">Digests</a>
-                <a href="#headlines">Headlines</a>
-                <a href="#sources">Sources</a>
-                <a href="#pulse">Pulse</a>
-            </nav>
-            <div class="topbar-actions">
-                <a class="button button--primary" href="{{ url_for('refresh') }}">Refresh feed</a>
-            </div>
-        </header>
+<div class="page-shell">
 
-        <section class="hero">
-            <div class="hero-copy">
-                <div class="eyebrow">AI News Network</div>
-                <h1>Live AI reports, concise summaries, and breaking headlines.</h1>
-                <p>Curated from YouTube, OpenAI, and Anthropic sources — all aggregated into a modern newsroom experience.</p>
-
-                <div class="hero-meta">
-                    <div><strong>{{ counts.youtube }}</strong> YouTube stories</div>
-                    <div><strong>{{ counts.openai }}</strong> OpenAI articles</div>
-                    <div><strong>{{ counts.anthropic }}</strong> Anthropic feeds</div>
-                    <div><strong>{{ counts.digests }}</strong> AI digests</div>
-                </div>
+    <!-- ── TOP BAR ─────────────────────────────────────────────────────── -->
+    <header class="topbar" role="banner">
+        <div class="brand">
+            <span class="brand-mark" aria-hidden="true">AI</span>
+            <div class="brand-text">
+                <strong>AI News Board</strong>
+                <small>Live intelligence feed</small>
             </div>
-
-            <div class="hero-panel">
-                <div class="media-panel">
-                    <img src="{{ url_for('static', filename='ai-hero.svg') }}" alt="AI hero image" />
-                </div>
-                <div class="panel-copy">
-                    <div class="panel-title">Today’s AI briefing</div>
-                    <p>Press Refresh to pull the latest articles and update the newsroom instantly.</p>
-                    <div class="panel-summary">
-                        <div>
-                            <span class="panel-label">Latest digest</span>
-                            <strong>{{ digests[0].title if digests else 'No digest available yet' }}</strong>
-                        </div>
-                        <div>
-                            <span class="panel-label">Updated</span>
-                            <strong>{{ last_updated.strftime('%b %d, %Y %H:%M') if last_updated else 'Not available' }}</strong>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <div class="ticker-bar">
-            <div class="ticker-label">LIVE NOW</div>
-            <div class="ticker-text">AI news scraping is active. Refresh for the newest stories from your sources.</div>
         </div>
 
-        <main class="content-layout">
-            <section class="section section--wide" id="digests">
+        <button class="hamburger" id="hamburger" aria-label="Open menu" aria-expanded="false">
+            <span></span><span></span><span></span>
+        </button>
+
+        <nav class="nav-links" id="navLinks" role="navigation" aria-label="Main navigation">
+            <a href="#digests">Digests</a>
+            <a href="#headlines">Headlines</a>
+            <a href="#sidebar">Sources</a>
+        </nav>
+
+        <div class="topbar-actions">
+            <div class="live-status" title="Real-time connection status">
+                <span class="live-dot" id="liveDot"></span>
+                <span class="live-label" id="liveLabel">LIVE</span>
+            </div>
+            <button id="updateBtn" class="button button--primary" onclick="App.startPipeline()">
+                ⟳ Update Now
+            </button>
+        </div>
+    </header>
+
+    <!-- ── HERO ─────────────────────────────────────────────────────────── -->
+    <section class="hero" aria-label="Overview">
+        <div class="hero-copy">
+            <div class="eyebrow">AI News Network</div>
+            <h1>Real-time AI intelligence, delivered live.</h1>
+            <p>Curated from YouTube, OpenAI, and Anthropic — streaming into your dashboard as it happens.</p>
+
+            <div class="hero-meta" role="list">
+                <div role="listitem">
+                    <strong id="stat-youtube">{{ stats.youtube }}</strong>
+                    <span>YouTube</span>
+                </div>
+                <div role="listitem">
+                    <strong id="stat-openai">{{ stats.openai }}</strong>
+                    <span>OpenAI</span>
+                </div>
+                <div role="listitem">
+                    <strong id="stat-anthropic">{{ stats.anthropic }}</strong>
+                    <span>Anthropic</span>
+                </div>
+                <div role="listitem">
+                    <strong id="stat-digests">{{ stats.digests }}</strong>
+                    <span>Digests</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="hero-panel">
+            <div class="panel-title">Today's briefing</div>
+            <p class="panel-sub">New articles stream in automatically every {{ 30 }} minutes.</p>
+            <div class="panel-summary">
+                <div class="panel-row">
+                    <span class="panel-label">Latest digest</span>
+                    <strong id="latestDigestTitle">
+                        {{ digests[0].title if digests else 'No digest yet — click Update Now' }}
+                    </strong>
+                </div>
+                <div class="panel-row">
+                    <span class="panel-label">Last updated</span>
+                    <strong id="lastUpdatedTime">
+                        {% if stats.last_updated %}
+                            {{ stats.last_updated[:16].replace('T', ' ') }} UTC
+                        {% else %}
+                            Not yet
+                        {% endif %}
+                    </strong>
+                </div>
+                <div class="panel-row">
+                    <span class="panel-label">Next auto-refresh</span>
+                    <strong id="countdown">Calculating…</strong>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ── TICKER ────────────────────────────────────────────────────────── -->
+    <div class="ticker-bar" aria-live="polite" aria-label="Latest headlines">
+        <div class="ticker-label">LIVE</div>
+        <div class="ticker-track" id="tickerTrack">
+            <span class="ticker-item">
+                {% if youtube_videos %}{{ youtube_videos[0].title }}{% elif openai_articles %}{{ openai_articles[0].title }}{% else %}Latest AI news — click ⟳ Update Now to fetch today's stories.{% endif %}
+            </span>
+        </div>
+    </div>
+
+    <!-- ── MAIN CONTENT ──────────────────────────────────────────────────── -->
+    <div class="content-layout">
+        <main class="main-col">
+
+            <!-- Digests -->
+            <section class="section" id="digests" aria-labelledby="digestsHeading">
                 <div class="section-header">
                     <div>
-                        <h2>AI Digest Spotlight</h2>
-                        <p>Top summaries distilled from the latest scraped stories.</p>
+                        <h2 id="digestsHeading">AI Digest Spotlight</h2>
+                        <p>Top summaries distilled by AI from the latest stories.</p>
                     </div>
                 </div>
 
                 {% if digests %}
-                <div class="digest-grid">
-                    {% for digest in digests %}
+                <div class="digest-grid" id="digestGrid">
+                    {% for d in digests %}
                     <article class="digest-card">
-                        <div class="digest-media">
-                            <img src="{{ url_for('static', filename='ai-thumb.svg') }}" alt="AI digest image" />
+                        <div class="digest-header">
+                            <span class="label label--type-{{ d.article_type }}">{{ d.article_type|capitalize }}</span>
+                            <a href="{{ d.url }}" target="_blank" rel="noreferrer" class="source-link" aria-label="Read source for {{ d.title }}">↗ Source</a>
                         </div>
-                        <div class="digest-card-body">
-                            <div class="digest-header">
-                                <span class="label">{{ digest.article_type|capitalize }}</span>
-                                <a href="{{ digest.url }}" target="_blank" rel="noreferrer" class="source-link">Source</a>
-                            </div>
-                            <h3>{{ digest.title }}</h3>
-                            <p>{{ digest.summary }}</p>
-                        </div>
+                        <h3>{{ d.title }}</h3>
+                        <p>{{ d.summary }}</p>
                     </article>
                     {% endfor %}
                 </div>
                 {% else %}
-                <div class="empty-state">
-                    <p>No digests are available yet. Click refresh to scrape fresh stories.</p>
+                <div class="empty-state" id="digestGrid">
+                    <div class="empty-icon">📰</div>
+                    <p>No digests yet. Click <strong>⟳ Update Now</strong> to generate today's AI summaries.</p>
                 </div>
                 {% endif %}
             </section>
 
-            <section class="section" id="headlines">
-                <div class="section-header section-header--compact">
+            <!-- Headlines -->
+            <section class="section" id="headlines" aria-labelledby="headlinesHeading">
+                <div class="section-header section-header--row">
                     <div>
-                        <h2>Latest AI headlines</h2>
-                        <p>Search, filter, and explore the newest stories across all sources.</p>
+                        <h2 id="headlinesHeading">Latest AI Headlines</h2>
+                        <p>Streaming live from all sources. New stories appear automatically.</p>
                     </div>
                     <div class="search-box">
-                        <input id="searchInput" type="search" placeholder="Search headlines..." />
+                        <input id="searchInput" type="search" placeholder="🔍 Search headlines…" aria-label="Search headlines" />
                     </div>
                 </div>
 
-                <div class="filter-row">
-                    <button class="filter-chip active" data-source="all">All</button>
-                    <button class="filter-chip" data-source="youtube">YouTube</button>
-                    <button class="filter-chip" data-source="openai">OpenAI</button>
-                    <button class="filter-chip" data-source="anthropic">Anthropic</button>
+                <div class="filter-row" role="group" aria-label="Filter by source">
+                    <button class="filter-chip active" data-source="all" id="chip-all">All</button>
+                    <button class="filter-chip" data-source="youtube" id="chip-youtube">▶ YouTube</button>
+                    <button class="filter-chip" data-source="openai" id="chip-openai">⚡ OpenAI</button>
+                    <button class="filter-chip" data-source="anthropic" id="chip-anthropic">🧠 Anthropic</button>
                 </div>
 
-                <div class="news-grid" id="newsGrid">
-                    {% for item in youtube_videos %}
-                    <article class="news-card" data-source="youtube">
+                <div class="news-grid" id="newsGrid" aria-live="polite" aria-label="News articles">
+                    {% set all_items = [] %}
+                    {% for v in youtube_videos %}{% set _ = all_items.append(('youtube', v.video_id, v.title, v.url, v.published_at, v.description)) %}{% endfor %}
+                    {% for a in openai_articles %}{% set _ = all_items.append(('openai', a.guid, a.title, a.url, a.published_at, a.description)) %}{% endfor %}
+                    {% for a in anthropic_articles %}{% set _ = all_items.append(('anthropic', a.guid, a.title, a.url, a.published_at, a.description)) %}{% endfor %}
+
+                    {% for source, item_id, title, url, pub, desc in all_items %}
+                    <article class="news-card" data-source="{{ source }}" data-article-id="{{ item_id }}">
                         <div class="news-card__meta">
-                            <span class="label label--source">YouTube</span>
-                            <span>{{ item.published_at.strftime('%b %d, %Y') }}</span>
+                            <span class="label label--source label--{{ source }}">
+                                {% if source == 'youtube' %}▶ YouTube{% elif source == 'openai' %}⚡ OpenAI{% else %}🧠 Anthropic{% endif %}
+                            </span>
+                            <time datetime="{{ pub.isoformat() if pub else '' }}">
+                                {{ pub.strftime('%b %d, %Y') if pub else '' }}
+                            </time>
                         </div>
-                        <h3><a href="{{ item.url }}" target="_blank" rel="noreferrer">{{ item.title }}</a></h3>
-                        <p>{{ item.description[:220] }}{% if item.description|length > 220 %}...{% endif %}</p>
+                        <h3><a href="{{ url }}" target="_blank" rel="noreferrer">{{ title }}</a></h3>
+                        <p>{{ (desc or '')[:220] }}{% if desc and desc|length > 220 %}…{% endif %}</p>
                     </article>
                     {% endfor %}
 
-                    {% for item in openai_articles %}
-                    <article class="news-card" data-source="openai">
-                        <div class="news-card__meta">
-                            <span class="label label--source label--openai">OpenAI</span>
-                            <span>{{ item.published_at.strftime('%b %d, %Y') }}</span>
-                        </div>
-                        <h3><a href="{{ item.url }}" target="_blank" rel="noreferrer">{{ item.title }}</a></h3>
-                        <p>{{ item.description[:220] }}{% if item.description|length > 220 %}...{% endif %}</p>
-                    </article>
-                    {% endfor %}
+                    {% if not all_items %}
+                    <div class="empty-state empty-state--full">
+                        <div class="empty-icon">🚀</div>
+                        <p>No articles yet. Click <strong>⟳ Update Now</strong> to scrape the latest AI news.</p>
+                    </div>
+                    {% endif %}
+                </div>
 
-                    {% for item in anthropic_articles %}
-                    <article class="news-card" data-source="anthropic">
-                        <div class="news-card__meta">
-                            <span class="label label--source label--anthropic">Anthropic</span>
-                            <span>{{ item.published_at.strftime('%b %d, %Y') }}</span>
-                        </div>
-                        <h3><a href="{{ item.url }}" target="_blank" rel="noreferrer">{{ item.title }}</a></h3>
-                        <p>{{ item.description[:220] }}{% if item.description|length > 220 %}...{% endif %}</p>
-                    </article>
-                    {% endfor %}
+                <div class="load-more-row">
+                    <button class="button button--ghost" id="loadMoreBtn" onclick="App.loadMore()" style="display:none;">
+                        Load more articles
+                    </button>
                 </div>
             </section>
-
-            <aside class="sidebar" id="sources">
-                <div class="panel card panel--highlight">
-                    <h3>AI News Pulse</h3>
-                    <p>Current inventory of AI stories and digests collected during this session.</p>
-                    <div class="metrics-list">
-                        <div><strong>{{ counts.youtube }}</strong><span>YouTube</span></div>
-                        <div><strong>{{ counts.openai }}</strong><span>OpenAI</span></div>
-                        <div><strong>{{ counts.anthropic }}</strong><span>Anthropic</span></div>
-                        <div><strong>{{ counts.digests }}</strong><span>Digests</span></div>
-                    </div>
-                </div>
-
-                <div class="panel card">
-                    <h3>Editor’s note</h3>
-                    <p>Use the search field to narrow headlines instantly. The refresh button pulls fresh content from all configured AI sources.</p>
-                </div>
-
-                <div class="panel card">
-                    <h3>Source spotlight</h3>
-                    <ul class="source-list">
-                        <li>YouTube channel feeds</li>
-                        <li>OpenAI blog & announcements</li>
-                        <li>Anthropic news feeds</li>
-                        <li>AI digest summaries</li>
-                    </ul>
-                </div>
-            </aside>
         </main>
 
-        <footer class="footer">
-            <div>Local AI news aggregator — built for quick reading and daily reporting.</div>
-            <div>Run again anytime with Refresh or by executing <code>uv run python main.py</code>.</div>
-        </footer>
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar" aria-label="Dashboard sidebar">
+            <div class="panel card panel--highlight" id="pulseCard">
+                <h3>📡 AI News Pulse</h3>
+                <p>Live inventory of stories collected across all sources.</p>
+                <div class="metrics-list" role="list">
+                    <div role="listitem">
+                        <span>YouTube videos</span>
+                        <strong id="sb-youtube">{{ stats.youtube }}</strong>
+                    </div>
+                    <div role="listitem">
+                        <span>OpenAI articles</span>
+                        <strong id="sb-openai">{{ stats.openai }}</strong>
+                    </div>
+                    <div role="listitem">
+                        <span>Anthropic articles</span>
+                        <strong id="sb-anthropic">{{ stats.anthropic }}</strong>
+                    </div>
+                    <div role="listitem">
+                        <span>AI Digests</span>
+                        <strong id="sb-digests">{{ stats.digests }}</strong>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel card">
+                <h3>⏱ Auto-Refresh</h3>
+                <p>The pipeline runs automatically every <strong>30 minutes</strong> to fetch the latest AI news.</p>
+                <div class="countdown-box">
+                    <div class="countdown-label">Next refresh in</div>
+                    <div class="countdown-time" id="countdownSidebar">Calculating…</div>
+                </div>
+            </div>
+
+            <div class="panel card">
+                <h3>📚 Sources</h3>
+                <ul class="source-list">
+                    <li>▶ YouTube — Matthew Berman channel</li>
+                    <li>⚡ OpenAI blog & announcements</li>
+                    <li>🧠 Anthropic research & news</li>
+                    <li>🗂 AI-generated digest summaries</li>
+                </ul>
+            </div>
+
+            <div class="panel card">
+                <h3>ℹ️ How it works</h3>
+                <p>Use the <strong>filter chips</strong> to narrow by source. Use <strong>search</strong> to find specific topics. New cards slide in automatically — no page refresh needed.</p>
+            </div>
+        </aside>
     </div>
 
-    <script>
-        const newsGrid = document.getElementById('newsGrid');
-        const searchInput = document.getElementById('searchInput');
-        const filterChips = document.querySelectorAll('.filter-chip');
+    <footer class="footer" role="contentinfo">
+        <div>AI News Board — Real-time aggregator for the AI community.</div>
+        <div>Built on Flask · PostgreSQL · Server-Sent Events</div>
+    </footer>
+</div>
 
-        function updateFilters() {
-            const query = searchInput.value.toLowerCase();
-            const activeSource = document.querySelector('.filter-chip.active').dataset.source;
-            document.querySelectorAll('.news-card').forEach(card => {
-                const title = card.querySelector('h3').innerText.toLowerCase();
-                const text = card.querySelector('p').innerText.toLowerCase();
-                const source = card.dataset.source;
-                const matchesQuery = !query || title.includes(query) || text.includes(query);
-                const matchesSource = activeSource === 'all' || source === activeSource;
-                card.style.display = matchesQuery && matchesSource ? 'block' : 'none';
-            });
+<!-- ── PIPELINE PROGRESS OVERLAY ─────────────────────────────────────────── -->
+<div id="pipelineOverlay" class="overlay" role="dialog" aria-modal="true" aria-labelledby="overlayTitle" style="display:none;">
+    <div class="overlay-card">
+        <div class="overlay-icon">🔄</div>
+        <h2 id="overlayTitle">Updating Today's News</h2>
+        <p id="pipelineStepLabel" class="overlay-step">Starting pipeline…</p>
+        <div class="progress-track">
+            <div id="pipelineProgressBar" class="progress-fill" style="width:0%"></div>
+        </div>
+        <div class="pip-steps" id="pipSteps">
+            <span class="pip-step" data-s="1">Scrape</span>
+            <span class="pip-step" data-s="2">Anthropic</span>
+            <span class="pip-step" data-s="3">YouTube</span>
+            <span class="pip-step" data-s="4">Digests</span>
+            <span class="pip-step" data-s="5">Email</span>
+        </div>
+        <p class="overlay-hint">New cards will appear live — no refresh needed.</p>
+    </div>
+</div>
+
+<!-- ── TOAST ─────────────────────────────────────────────────────────────── -->
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<!-- ── SCRIPTS ───────────────────────────────────────────────────────────── -->
+<script>
+'use strict';
+
+const App = (() => {
+    // ── State ────────────────────────────────────────────────────────────
+    let evtSource      = null;
+    let nextRunAt      = null;
+    let countdownTimer = null;
+    let loadOffset     = 0;
+    const PAGE_SIZE    = 20;
+    const seenIds      = new Set();
+    const tickerTitles = [];
+    let tickerIdx      = 0;
+    let tickerTimer    = null;
+
+    // ── DOM refs ─────────────────────────────────────────────────────────
+    const $ = id => document.getElementById(id);
+    const newsGrid      = $('newsGrid');
+    const overlay       = $('pipelineOverlay');
+    const progressBar   = $('pipelineProgressBar');
+    const stepLabel     = $('pipelineStepLabel');
+    const updateBtn     = $('updateBtn');
+    const liveDot       = $('liveDot');
+    const liveLabel     = $('liveLabel');
+    const tickerTrack   = $('tickerTrack');
+    const toast         = $('toast');
+    let   toastTimer    = null;
+
+    // Seed seenIds from server-rendered cards
+    document.querySelectorAll('[data-article-id]').forEach(el => {
+        seenIds.add(el.dataset.articleId);
+    });
+
+    // Seed ticker from existing headlines
+    document.querySelectorAll('.news-card h3 a').forEach(a => {
+        tickerTitles.push({ title: a.textContent.trim(), url: a.href });
+    });
+
+    // ── Toast ─────────────────────────────────────────────────────────────
+    function showToast(msg, duration = 4000) {
+        toast.textContent = msg;
+        toast.classList.add('toast--show');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => toast.classList.remove('toast--show'), duration);
+    }
+
+    // ── Ticker ────────────────────────────────────────────────────────────
+    function rotateTicker() {
+        if (!tickerTitles.length) return;
+        const item = tickerTitles[tickerIdx % tickerTitles.length];
+        tickerTrack.style.opacity = '0';
+        setTimeout(() => {
+            tickerTrack.innerHTML = `<a href="${item.url}" target="_blank" rel="noreferrer" class="ticker-item">${item.title}</a>`;
+            tickerTrack.style.opacity = '1';
+        }, 400);
+        tickerIdx++;
+    }
+
+    function startTicker() {
+        clearInterval(tickerTimer);
+        if (tickerTitles.length) {
+            rotateTicker();
+            tickerTimer = setInterval(rotateTicker, 5000);
         }
+    }
 
-        searchInput.addEventListener('input', updateFilters);
-        filterChips.forEach(chip => {
+    // ── Countdown ─────────────────────────────────────────────────────────
+    function startCountdown(isoString) {
+        nextRunAt = isoString ? new Date(isoString) : null;
+        clearInterval(countdownTimer);
+        if (!nextRunAt) return;
+
+        const tick = () => {
+            const diff = nextRunAt - Date.now();
+            const el1  = $('countdown');
+            const el2  = $('countdownSidebar');
+            if (diff <= 0) {
+                if (el1) el1.textContent = 'Running soon…';
+                if (el2) el2.textContent = 'Running soon…';
+                return;
+            }
+            const m = Math.floor(diff / 60000);
+            const s = Math.floor((diff % 60000) / 1000);
+            const txt = `${m}m ${String(s).padStart(2,'0')}s`;
+            if (el1) el1.textContent = txt;
+            if (el2) el2.textContent = txt;
+        };
+
+        tick();
+        countdownTimer = setInterval(tick, 1000);
+    }
+
+    // ── Stats update ──────────────────────────────────────────────────────
+    function updateStats(stats) {
+        const set = (id, val) => { const el = $(id); if (el && val !== undefined) el.textContent = val; };
+        set('stat-youtube',   stats.youtube);
+        set('stat-openai',    stats.openai);
+        set('stat-anthropic', stats.anthropic);
+        set('stat-digests',   stats.digests);
+        set('sb-youtube',     stats.youtube);
+        set('sb-openai',      stats.openai);
+        set('sb-anthropic',   stats.anthropic);
+        set('sb-digests',     stats.digests);
+
+        if (stats.last_updated) {
+            const el = $('lastUpdatedTime');
+            if (el) el.textContent = new Date(stats.last_updated).toLocaleString();
+        }
+        if (stats.next_run_at) startCountdown(stats.next_run_at);
+    }
+
+    // ── Card injection ────────────────────────────────────────────────────
+    function makeCard(article) {
+        const date = new Date(article.published_at);
+        const dateStr = date.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+        const srcLabel = { youtube:'▶ YouTube', openai:'⚡ OpenAI', anthropic:'🧠 Anthropic' }[article.source] || article.source;
+        const desc = article.description || '';
+        const card = document.createElement('article');
+        card.className = 'news-card news-card--new';
+        card.dataset.source    = article.source;
+        card.dataset.articleId = article.id;
+        card.innerHTML = `
+            <div class="news-card__meta">
+                <span class="label label--source label--${article.source}">${srcLabel}</span>
+                <time>${dateStr}</time>
+            </div>
+            <span class="new-badge" aria-label="New article">NEW</span>
+            <h3><a href="${article.url}" target="_blank" rel="noreferrer">${article.title}</a></h3>
+            <p>${desc.length > 220 ? desc.slice(0,220) + '…' : desc}</p>
+        `;
+        return card;
+    }
+
+    function injectCard(article) {
+        if (seenIds.has(article.id)) return;
+        seenIds.add(article.id);
+
+        // Remove empty-state if present
+        const empty = newsGrid.querySelector('.empty-state');
+        if (empty) empty.remove();
+
+        const card = makeCard(article);
+        newsGrid.prepend(card);
+
+        // Add to ticker
+        tickerTitles.unshift({ title: article.title, url: article.url });
+        if (tickerTitles.length === 1) startTicker();
+
+        // Apply current filter
+        applyFilter();
+
+        // Fade out NEW badge after 12s
+        setTimeout(() => {
+            const badge = card.querySelector('.new-badge');
+            if (badge) { badge.style.opacity = '0'; badge.style.transform = 'scale(0.8)'; }
+        }, 12000);
+    }
+
+    // ── Pipeline UI ───────────────────────────────────────────────────────
+    function updatePipelineUI(status) {
+        if (status.running) {
+            overlay.style.display = 'flex';
+            updateBtn.disabled = true;
+            updateBtn.textContent = '⟳ Running…';
+
+            const pct = Math.round(((status.step || 1) / 5) * 100);
+            progressBar.style.width = pct + '%';
+            if (stepLabel) stepLabel.textContent = status.step_label || 'Processing…';
+
+            document.querySelectorAll('.pip-step').forEach(el => {
+                const s = parseInt(el.dataset.s);
+                el.classList.remove('active','done');
+                if (s === status.step) el.classList.add('active');
+                if (s < status.step)  el.classList.add('done');
+            });
+        } else {
+            if (status.result === 'success' || status.finished_at) {
+                progressBar.style.width = '100%';
+                if (stepLabel) stepLabel.textContent = '✅ Done! New content loaded live.';
+                document.querySelectorAll('.pip-step').forEach(el => {
+                    el.classList.remove('active'); el.classList.add('done');
+                });
+                showToast('✅ Feed updated with the latest AI news!');
+                setTimeout(() => {
+                    overlay.style.display = 'none';
+                    updateBtn.disabled = false;
+                    updateBtn.textContent = '⟳ Update Now';
+                    // Reset progress for next run
+                    progressBar.style.width = '0%';
+                    document.querySelectorAll('.pip-step').forEach(el => el.classList.remove('active','done'));
+                }, 2500);
+            } else if (status.error) {
+                if (stepLabel) stepLabel.textContent = '❌ Error: ' + status.error;
+                showToast('❌ Pipeline error: ' + status.error, 6000);
+                setTimeout(() => {
+                    overlay.style.display = 'none';
+                    updateBtn.disabled = false;
+                    updateBtn.textContent = '⟳ Update Now';
+                }, 4000);
+            } else {
+                overlay.style.display = 'none';
+                updateBtn.disabled = false;
+                updateBtn.textContent = '⟳ Update Now';
+            }
+        }
+    }
+
+    // ── SSE connection ────────────────────────────────────────────────────
+    function connect() {
+        if (evtSource) evtSource.close();
+        evtSource = new EventSource('/api/stream');
+
+        evtSource.addEventListener('stats', e => {
+            updateStats(JSON.parse(e.data));
+        });
+
+        evtSource.addEventListener('new_article', e => {
+            injectCard(JSON.parse(e.data));
+        });
+
+        evtSource.addEventListener('pipeline_status', e => {
+            updatePipelineUI(JSON.parse(e.data));
+        });
+
+        evtSource.onerror = () => {
+            liveDot.classList.add('live-dot--offline');
+            liveLabel.textContent = 'RECONNECTING';
+            setTimeout(connect, 5000);
+        };
+
+        evtSource.onopen = () => {
+            liveDot.classList.remove('live-dot--offline');
+            liveLabel.textContent = 'LIVE';
+        };
+    }
+
+    // ── Filters & search ──────────────────────────────────────────────────
+    function applyFilter() {
+        const query  = ($('searchInput')?.value || '').toLowerCase().trim();
+        const active = document.querySelector('.filter-chip.active')?.dataset.source || 'all';
+        let visible  = 0;
+
+        document.querySelectorAll('.news-card').forEach(card => {
+            const title  = (card.querySelector('h3')?.textContent || '').toLowerCase();
+            const text   = (card.querySelector('p')?.textContent  || '').toLowerCase();
+            const source = card.dataset.source || '';
+            const qMatch = !query || title.includes(query) || text.includes(query);
+            const sMatch = active === 'all' || source === active;
+            const show   = qMatch && sMatch;
+            card.style.display = show ? '' : 'none';
+            if (show) visible++;
+        });
+
+        // Show load-more if there might be more
+        const btn = $('loadMoreBtn');
+        if (btn) btn.style.display = visible >= PAGE_SIZE ? '' : 'none';
+    }
+
+    function initFilters() {
+        document.querySelectorAll('.filter-chip').forEach(chip => {
             chip.addEventListener('click', () => {
-                filterChips.forEach(button => button.classList.remove('active'));
+                document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
                 chip.classList.add('active');
-                updateFilters();
+                applyFilter();
             });
         });
-    </script>
+
+        const si = $('searchInput');
+        if (si) si.addEventListener('input', applyFilter);
+    }
+
+    // ── Load more ─────────────────────────────────────────────────────────
+    async function loadMore() {
+        const source = document.querySelector('.filter-chip.active')?.dataset.source || 'all';
+        loadOffset += PAGE_SIZE;
+        try {
+            const r = await fetch(`/api/news?source=${source}&limit=${PAGE_SIZE}&offset=${loadOffset}`);
+            const data = await r.json();
+            data.items.forEach(article => {
+                if (!seenIds.has(article.id)) {
+                    seenIds.add(article.id);
+                    newsGrid.appendChild(makeCard(article));
+                }
+            });
+            applyFilter();
+            if (!data.items.length) {
+                $('loadMoreBtn').style.display = 'none';
+                showToast('All articles loaded!');
+            }
+        } catch (e) {
+            showToast('Failed to load more: ' + e.message);
+        }
+    }
+
+    // ── Public: start pipeline ────────────────────────────────────────────
+    function startPipeline() {
+        fetch('/api/pipeline/run', { method:'POST' })
+            .then(r => r.json())
+            .then(data => {
+                if (data.status === 'already_running') {
+                    showToast('Pipeline is already running!');
+                    return;
+                }
+                updatePipelineUI({ running: true, step: 1, step_label: 'Starting pipeline…' });
+            })
+            .catch(err => showToast('Failed to start: ' + err));
+    }
+
+    // ── Mobile nav ────────────────────────────────────────────────────────
+    function initMobileNav() {
+        const btn = $('hamburger');
+        const nav = $('navLinks');
+        if (!btn || !nav) return;
+        btn.addEventListener('click', () => {
+            const open = nav.classList.toggle('nav--open');
+            btn.setAttribute('aria-expanded', open);
+        });
+    }
+
+    // ── Boot ───────────────────────────────────────────────────────────────
+    function boot() {
+        connect();
+        initFilters();
+        initMobileNav();
+        startTicker();
+
+        // Restore pipeline state if already running
+        fetch('/api/pipeline/status')
+            .then(r => r.json())
+            .then(status => {
+                if (status.running) updatePipelineUI(status);
+                if (status.next_run_at) startCountdown(status.next_run_at);
+            });
+    }
+
+    boot();
+
+    return { startPipeline, loadMore };
+})();
+</script>
 </body>
 </html>
