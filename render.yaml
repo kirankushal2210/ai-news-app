@@ -21,5 +21,4 @@ services:
 databases:
   - name: ai-news-db
     databaseName: ai_news_aggregator
-    user: postgres
     plan: free
