@@ -1,8 +1,14 @@
+databases:
+  - name: ai-news-db
+    plan: free
+    databaseName: ai_news_aggregator
+    user: ai_user
+
 services:
   - type: web
     name: ai-news-aggregator
     env: python
-    buildCommand: pip install -r requirements.txt
+    buildCommand: pip install -r requirements.txt && cd frontend && npm install && npm run build
     startCommand: gunicorn -w 1 --threads 4 -b 0.0.0.0:$PORT web:app
     envVars:
       - key: PYTHON_VERSION
@@ -10,7 +16,11 @@ services:
       - key: FLASK_DEBUG
         value: false
       - key: DATABASE_URL
-        sync: false
+        fromDatabase:
+          name: ai-news-db
+          property: connectionString
+      - key: USE_CLOUD_LLM
+        value: true
       - key: OPENAI_API_KEY
         sync: false
       - key: DEEPSEEK_API_KEY

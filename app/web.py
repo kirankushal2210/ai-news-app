@@ -250,11 +250,23 @@ def create_app() -> Flask:
     # ── Dashboard — serve React SPA build ────────────────────────────────────
     REACT_DIR = os.path.join(os.path.dirname(__file__), 'static', 'react')
 
-    @app.route("/")
-    def index():
+    @app.route("/", defaults={'path': ''})
+    @app.route("/<path:path>")
+    def serve_react(path):
+        # Serve static assets from the React directory
+        if path and os.path.exists(os.path.join(REACT_DIR, path)):
+            return send_from_directory(REACT_DIR, path)
+        
+        # fallback to API check (though APIs are defined below, 
+        # Flask checks routes in order, so we should put this below API routes or handle it here)
+        if path.startswith('api/'):
+            return None # Fall through to rest of routes
+            
+        # Default: serve index.html for SPA routing
         react_index = os.path.join(REACT_DIR, 'index.html')
         if os.path.exists(react_index):
             return send_from_directory(REACT_DIR, 'index.html')
+            
         # Fallback: plain stats page while React build is absent
         session = SessionLocal()
         try:
