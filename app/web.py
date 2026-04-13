@@ -243,7 +243,7 @@ def create_app() -> Flask:
     app = Flask(__name__, template_folder="templates", static_folder="static")
 
     with _scheduler_guard:
-        if not _scheduler_started:
+        if not _scheduler_started and os.getenv("VERCEL") is None:
             _scheduler_started = True
             threading.Thread(target=_scheduler, daemon=True).start()
 
