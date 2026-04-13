@@ -16,8 +16,10 @@ def get_database_url() -> str:
     port = os.getenv("POSTGRES_PORT", "5432")
     db = os.getenv("POSTGRES_DB", "ai_news_aggregator")
     return f"postgresql://{user}:{password}@{host}:{port}/{db}"
-
-engine = create_engine(get_database_url())
+engine = create_engine(
+    get_database_url(), 
+    connect_args={"connect_timeout": 5}
+)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 from app.database.models import Base
