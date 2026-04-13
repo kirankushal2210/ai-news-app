@@ -1,14 +1,8 @@
 services:
   - type: web
     name: ai-news-aggregator
-    env: python
-    buildCommand: pip install -r requirements.txt && cd frontend && npm install && npm run build
-    startCommand: gunicorn -w 1 --threads 4 -b 0.0.0.0:$PORT web:app
+    env: docker
     envVars:
-      - key: PYTHON_VERSION
-        value: 3.12.0
-      - key: FLASK_DEBUG
-        value: false
       - key: DATABASE_URL
         sync: false
       - key: USE_CLOUD_LLM

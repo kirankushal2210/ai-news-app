@@ -35,4 +35,4 @@ ENV FLASK_DEBUG=false
 ENV PORT=7860
 
 # Start the application using Gunicorn
-CMD ["gunicorn", "-w", "1", "--threads", "4", "-b", "0.0.0.0:7860", "web:app"]
+CMD gunicorn -w 1 --threads 4 -b 0.0.0.0:$PORT web:app
