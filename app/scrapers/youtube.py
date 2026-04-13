@@ -58,7 +58,15 @@ class YouTubeScraper:
             return None
 
     def get_latest_videos(self, channel_id: str, hours: int = 24) -> list[ChannelVideo]:
-        feed = feedparser.parse(self._get_rss_url(channel_id))
+        import requests
+        try:
+            resp = requests.get(self._get_rss_url(channel_id), timeout=10)
+            resp.raise_for_status()
+            feed = feedparser.parse(resp.content)
+        except Exception as e:
+            print(f"Failed to fetch {channel_id}: {e}")
+            return []
+            
         if not feed.entries:
             return []
         

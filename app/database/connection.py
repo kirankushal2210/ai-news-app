@@ -20,6 +20,11 @@ def get_database_url() -> str:
 engine = create_engine(get_database_url())
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
+from app.database.models import Base
+try:
+    Base.metadata.create_all(bind=engine)
+except Exception as e:
+    print(f"Warning: Could not create tables on boot: {e}")
+
 def get_session():
     return SessionLocal()
-

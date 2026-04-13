@@ -17,7 +17,15 @@ class OpenAIScraper:
         self.rss_url = "https://openai.com/news/rss.xml"
 
     def get_articles(self, hours: int = 24) -> List[OpenAIArticle]:
-        feed = feedparser.parse(self.rss_url)
+        import requests
+        try:
+            resp = requests.get(self.rss_url, timeout=10)
+            resp.raise_for_status()
+            feed = feedparser.parse(resp.content)
+        except Exception as e:
+            print(f"Failed to fetch {self.rss_url}: {e}")
+            return []
+            
         if not feed.entries:
             return []
         

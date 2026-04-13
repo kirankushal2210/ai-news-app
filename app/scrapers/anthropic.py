@@ -26,8 +26,16 @@ class AnthropicScraper:
         articles = []
         seen_guids = set()
         
+        import requests
         for rss_url in self.rss_urls:
-            feed = feedparser.parse(rss_url)
+            try:
+                resp = requests.get(rss_url, timeout=10)
+                resp.raise_for_status()
+                feed = feedparser.parse(resp.content)
+            except Exception as e:
+                print(f"Failed to fetch {rss_url}: {e}")
+                continue
+                
             if not feed.entries:
                 continue
             
