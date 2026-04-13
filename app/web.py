@@ -223,13 +223,17 @@ def _start_pipeline(hours: int = 24, top_n: int = 10) -> bool:
 def _scheduler() -> None:
     """Auto-trigger the pipeline every AUTO_INTERVAL_MINUTES minutes."""
     interval = AUTO_INTERVAL_MINUTES * 60
+    
+    # Run immediately on boot
+    _start_pipeline(hours=DEFAULT_HOURS)
+    
     while True:
         next_ts = time.time() + interval
         _pl["next_run_at"] = (
             datetime.fromtimestamp(next_ts, tz=timezone.utc).isoformat()
         )
         time.sleep(interval)
-        _start_pipeline()
+        _start_pipeline(hours=DEFAULT_HOURS)
 
 
 # ── Guard so the scheduler starts only once per process ──────────────────────
