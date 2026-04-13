@@ -103,11 +103,15 @@ def _stats_from_session(session) -> dict:
 
 
 def _get_stats() -> dict:
-    session = SessionLocal()
     try:
-        return _stats_from_session(session)
-    finally:
-        session.close()
+        session = SessionLocal()
+        try:
+            return _stats_from_session(session)
+        finally:
+            session.close()
+    except Exception as e:
+        import traceback
+        return {"error": str(e), "traceback": traceback.format_exc()}
 
 
 # ── Pipeline ──────────────────────────────────────────────────────────────────
